@@ -1,0 +1,81 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.6.0
+  kernelspec:
+    display_name: R 4.0.2
+    language: R
+    name: ir4.0.2
+---
+
+# Box-Cox transformation Demo
+Using Random data, we generate a polynomial dataset with $x \in [0.1 , 10]$. 
+Using the boxcox R function, we estimate the best box cox transform to get a straight data set. 
+with the  `?boxcox`
+command you will see what other parameters you can give the boxcox function. 
+More information about Box-Cox transforms by Peng-Fei Li: https://www.ime.usp.br/~abe/lista/pdfm9cJKUmFZp.pdf
+The original script (without randomization) can be found at https://www.statology.org/box-cox-transformation-in-r/
+
+```{r}
+require(MASS)
+#require(ggplot2)
+```
+
+```{r}
+#?runif
+#?rdisc
+n = rnorm(1,100,10)
+r = rnorm(1,1,2)
+x=runif(n,0.1,10)
+y = 20+ x^r *(1+ rnorm(n,0,.3))
+print(paste("polynomial: y = 20 +x^" , round(r,4), "+eps"))
+```
+
+```{r}
+#find optimal lambda for Box-Cox transformation 
+bc <- boxcox(y ~ x, lambda = seq(-3,3,0.1))
+(lambda <- bc$x[which.max(bc$y)])
+#fit new linear regression model using the Box-Cox transformation
+new_model <- lm(((y^lambda-1)/lambda) ~ x)
+```
+
+### Fit linear regression models
+
+```{r}
+model <- lm(y~x)
+#fit new linear regression model using the Box-Cox transformation
+new_model <- lm(((y^lambda-1)/lambda) ~ x)
+#define plotting area
+op <- par(pty = "s", mfrow = c(2, 2))
+
+#Q-Q plot for original model
+qqnorm(model$residuals)
+qqline(model$residuals)
+
+#Q-Q plot for Box-Cox transformed model
+qqnorm(new_model$residuals)
+qqline(new_model$residuals)
+plot(x,y)
+title("original scatterplot and lm fit")
+abline(model)
+plot(x, (y^lambda-1)/lambda)
+title("transformed scatterplot and lm fit")
+abline(new_model)
+#display all 4 plots
+par(op)
+```
+
+Depending on the random exponent, the transformed data shows a much straighter QQ plot, showing that the dat ais more normal, and the right hand side Scatterplot has a more equal variation and is straighter around the line. (if the exponent is positive, it works well. if the exponent is negative, like -3, it doesnt work well.  
+
+
+### A summary of the original and transformed models:
+
+```{r}
+summary(model)
+summary(new_model)
+```
