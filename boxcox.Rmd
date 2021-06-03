@@ -13,30 +13,32 @@ jupyter:
     name: ir4.0.2
 ---
 
+<!-- #region slideshow={"slide_type": "slide"} -->
 # Box-Cox transformation Demo
 Using Random data, we generate a polynomial dataset with $x \in [0.1 , 10]$. 
 Using the boxcox R function, we estimate the best box cox transform to get a straight data set. 
-with the  `?boxcox`
-command you will see what other parameters you can give the boxcox function. 
+
+With the  `?boxcox` command you will see what other parameters you can give the boxcox function. 
 More information about Box-Cox transforms by Peng-Fei Li: https://www.ime.usp.br/~abe/lista/pdfm9cJKUmFZp.pdf
 The original script (without randomization) can be found at https://www.statology.org/box-cox-transformation-in-r/
+<!-- #endregion -->
 
-```{r}
+```{r slideshow={'slide_type': 'fragment'}}
 require(MASS)
 #require(ggplot2)
 ```
 
-```{r}
+```{r slideshow={'slide_type': 'fragment'}}
 #?runif
 #?rdisc
-n = rnorm(1,100,10)
-r = rnorm(1,1,2)
+n = 1000
+r = rnorm(1,2,2)
 x=runif(n,0.1,10)
 y = 20+ x^r *(1+ rnorm(n,0,.3))
 print(paste("polynomial: y = 20 +x^" , round(r,4), "+eps"))
 ```
 
-```{r}
+```{r slideshow={'slide_type': 'subslide'}}
 #find optimal lambda for Box-Cox transformation 
 bc <- boxcox(y ~ x, lambda = seq(-3,3,0.1))
 (lambda <- bc$x[which.max(bc$y)])
@@ -44,9 +46,11 @@ bc <- boxcox(y ~ x, lambda = seq(-3,3,0.1))
 new_model <- lm(((y^lambda-1)/lambda) ~ x)
 ```
 
+<!-- #region slideshow={"slide_type": "slide"} -->
 ### Fit linear regression models
+<!-- #endregion -->
 
-```{r}
+```{r slideshow={'slide_type': 'fragment'}}
 model <- lm(y~x)
 #fit new linear regression model using the Box-Cox transformation
 new_model <- lm(((y^lambda-1)/lambda) ~ x)
@@ -60,22 +64,142 @@ qqline(model$residuals)
 #Q-Q plot for Box-Cox transformed model
 qqnorm(new_model$residuals)
 qqline(new_model$residuals)
-plot(x,y)
+plot(x,y,pch = ".")#, col = c(50,50,50,alpha = .9))
 title("original scatterplot and lm fit")
 abline(model)
-plot(x, (y^lambda-1)/lambda)
+plot(x, (y^lambda-1)/lambda, pch = ".") #, col =c(50,50,50,alpha = .5))
 title("transformed scatterplot and lm fit")
 abline(new_model)
 #display all 4 plots
 par(op)
 ```
 
-Depending on the random exponent, the transformed data shows a much straighter QQ plot, showing that the dat ais more normal, and the right hand side Scatterplot has a more equal variation and is straighter around the line. (if the exponent is positive, it works well. if the exponent is negative, like -3, it doesnt work well.  
+<!-- #region slideshow={"slide_type": "subslide"} -->
+If we are lucky (with the random exponent), the transformed data shows a much straighter QQ plot, showing that the residuals are more normally distributed, and the right hand side scatterplot has a more equal variation and is straighter around the line. 
 
+If the exponent is larger than 1, it works well. if the exponent is 03 or -3, it doesnt work well, i.e. the QQ plot on the right hand side shows no less deviation from a straight line than the untransformed one on the LHS, and the Regression fit plot on the RHS shows the transformed data is not better fitted to a straight line than the untransformed data on the LHS.  
+Run the above cells a few times to convince yourself of this. 
+<!-- #endregion -->
 
-### A summary of the original and transformed models:
+<!-- #region slideshow={"slide_type": "slide"} -->
+### A summary of estimations of the original and transformed models:
+<!-- #endregion -->
 
-```{r}
+```{r slideshow={'slide_type': '-'}}
 summary(model)
 summary(new_model)
+```
+
+<!-- #region slideshow={"slide_type": "slide"} -->
+## Other data distributions
+<!-- #endregion -->
+
+<!-- #region slideshow={"slide_type": "subslide"} -->
+### Poisson distributed data: (e.g. # of potholes in a km of road)
+<!-- #endregion -->
+
+```{r slideshow={'slide_type': 'fragment'}}
+#find optimal lambda for Box-Cox transformation of Poisson data
+require(purrr)
+m <- runif(1,0.1,10)
+df <- data.frame( t=seq(from=1, to = 5, length.out= n))
+df$z <- map_dbl(df$t, {function(t) { rpois(1,t) +.1} })
+op <- par(pty = "s", mfrow = c(1, 2))  #2 plots side by side
+hist(df$z/df$t,prob =T)
+lines(density(df$z))
+lines(density(df$z, adjust=2), lty="dotted")
+message(paste("z = Poisson(t)+.01  
+   ( +.01 to be positive: Box Cox transforms only work for positive variables)"))
+#print(bcz)
+bcz <- boxcox(df$z ~ df$t, lambda = seq(-3,3,0.1))
+lambdaz <- bcz$x[which.max(bcz$y)]
+message('best exponent seems to be' )
+message(lambdaz)
+par(op)
+```
+
+```{r slideshow={'slide_type': 'subslide'}}
+modelz <- lm(df$z ~ df$t)
+#fit new linear regression model using the Box-Cox transformation
+#print( (df$z^lambdaz-1)/lambdaz)
+
+new_modelz <- lm(((df$z^lambdaz-1)/lambdaz) ~ df$t)
+
+#define plotting area
+op <- par(pty = "s", mfrow = c(2, 2))
+
+#Q-Q plot for original model
+qqnorm(modelz$residuals)
+qqline(modelz$residuals)
+
+#Q-Q plot for Box-Cox transformed model
+qqnorm(new_modelz$residuals)
+qqline(new_modelz$residuals)
+plot(df$t,df$z,pch = ".")
+title("original scatterplot and lm fit")
+abline(modelz)
+plot(df$t, (df$z^lambdaz-1)/lambdaz,pch = ".")
+title("transformed scatterplot and lm fit")
+abline(new_modelz)
+#display all 4 plots
+par(op)
+```
+
+```{r slideshow={'slide_type': 'subslide'}}
+summary(modelz)
+summary(new_modelz)
+```
+
+<!-- #region slideshow={"slide_type": "slide"} -->
+### Exponentially distributed data (# of km between potholes on road)
+<!-- #endregion -->
+
+```{r slideshow={'slide_type': 'fragment'}}
+#find optimal lambda for Box-Cox transformation of exponential data
+
+
+df$e <- map_dbl(df$t, {function(t) { rexp(1,t) +.01} })
+op <- par(pty = "s", mfrow = c(1, 2))
+hist(df$e/df$t,prob =T)
+lines(density(df$e))
+lines(density(df$e, adjust=2), lty="dotted")
+message(paste("e = exp(t)+.01  
+   ( +.01 to be positive: Box Cox transforms only work for positive variables)"))
+
+bce <- boxcox(df$e ~ df$t, lambda = seq(-3,3,0.1))
+lambdae <- bce$x[which.max(bce$y)]
+message('best exponent seems to be' )
+message(lambdae)
+par(op)
+```
+
+```{r slideshow={'slide_type': 'subslide'}}
+modele <- lm(df$e ~ df$t)
+#fit new linear regression model using the Box-Cox transformation
+
+new_modele <- lm(((df$e^lambdae-1)/lambdae) ~ df$t)
+
+#define plotting area
+op <- par(pty = "s", mfrow = c(2, 2))
+
+#Q-Q plot for original model
+qqnorm(modele$residuals)
+qqline(modele$residuals)
+
+#Q-Q plot for Box-Cox transformed model
+qqnorm(new_modele$residuals)
+qqline(new_modele$residuals)
+plot(df$t,df$e,pch = ".")
+title("original scatterplot and lm fit")
+abline(modele)
+plot(df$t, (df$e^lambdae-1)/lambdae,pch = ".")
+title("transformed scatterplot and lm fit")
+abline(new_modele)
+#display all 4 plots
+par(op)
+```
+
+```{r slideshow={'slide_type': 'subslide'}}
+summary(modele)
+summary(new_modele)
 ```
